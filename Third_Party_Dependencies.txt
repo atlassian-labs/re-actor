@@ -1,0 +1,15 @@
+Guava (https://github.com/google/guava/tree/master)
+Copyright (C) 2006 The Guava Authors
+License: Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0.txt)
+
+SLF4J (https://www.slf4j.org)
+Copyright (C) 2004-2025 QOS.ch
+License: MIT (http://www.opensource.org/licenses/mit-license.php)
+
+Micrometer (https://micrometer.io)
+Copyright (C) 2017-Present VMware, Inc. All Rights Reserved.
+License: Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0.txt)
+
+Reactor Core (https://github.com/reactor/reactor-core/tree/main)
+Copyright (C) 2005 - 2024 Broadcom. All Rights Reserved
+License: Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0.txt)

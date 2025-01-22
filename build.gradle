@@ -1,0 +1,110 @@
+import org.ajoberstar.grgit.Grgit
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'com.github.johnrengelman.shadow' version "7.1.2"
+    id 'org.ajoberstar.grgit' version "2.2.1"
+    id 'io.spring.dependency-management' version "1.1.0"
+}
+
+group = 'com.atlassian.actor'
+version = '2.0.1-SNAPSHOT'
+def mavenUser = ''
+def mavenPassword = ''
+
+if (project.hasProperty("maven_user")) {
+    mavenUser = project.property("maven_user")
+    mavenPassword = project.property("maven_password")
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+dependencies {
+
+    implementation 'com.google.guava:guava:33.3.0-jre'
+
+    // Logging dependencies
+    implementation 'org.slf4j:slf4j-api:2.0.16'
+    // Metrics
+    implementation 'io.micrometer:micrometer-core:1.14.2'
+
+    // Reactor
+    implementation 'io.projectreactor:reactor-core:3.7.1'
+    implementation 'io.projectreactor:reactor-core-micrometer:1.2.1'
+    // Testing
+
+    testImplementation 'org.mockito:mockito-core:5.4.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.4.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.3'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.9.3'
+    testImplementation 'org.assertj:assertj-core:3.24.2'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId 'com.atlassian.actor'
+            artifactId 're-actor'
+            version '2.0.1-SNAPSHOT'
+
+            pom.withXml {
+                def dependenciesNode = asNode().appendNode('dependencies')
+                def managedVersions = dependencyManagement.managedVersions
+                configurations.runtimeClasspath.allDependencies.each { dependency ->
+                    if (!(dependency instanceof SelfResolvingDependency)) {
+                        logger.info("Adding dependency ${dependency.group}:${dependency.name}, .... ${dependency.version}")
+                        def dependencyNode = dependenciesNode.appendNode("dependency")
+                        dependencyNode.appendNode("groupId", dependency.group)
+                        dependencyNode.appendNode("artifactId", dependency.name)
+                        dependencyNode.appendNode("version", dependency.version)
+                        dependencyNode.appendNode("scope", "compile")
+                    }
+                }
+            }
+
+            artifact tasks.shadowJar
+            artifact sourcesJar
+            artifact javadocJar
+        }
+    }
+
+    repositories {
+        maven {
+            url = version.endsWith("-SNAPSHOT") ?
+                    "https://packages.atlassian.com/mvn/maven-private-snapshot/" :
+                    "https://packages.atlassian.com/mvn/maven-private/"
+            credentials {
+                username = mavenUser
+                password = mavenPassword
+            }
+        }
+    }
+}
+
+tasks.shadowJar {
+    archiveBaseName.set('re-actor')
+    archiveClassifier.set('')
+    manifest {
+        attributes 'BUILD_HASH': Grgit.open(currentDir: project.rootDir).head().id
+    }
+    mergeServiceFiles()
+    finalizedBy('sourcesJar')
+}
+
+test {
+    jvmArgs('--add-opens', 'java.base/java.time=ALL-UNNAMED')
+}
+
+tasks.withType(Test) {
+    useJUnitPlatform()
+    testLogging {
+        events("PASSED", "FAILED", "SKIPPED")
+        exceptionFormat = TestExceptionFormat.FULL
+    }
+    outputs.upToDateWhen { false }
+}

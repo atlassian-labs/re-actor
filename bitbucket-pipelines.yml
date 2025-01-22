@@ -1,0 +1,48 @@
+image: gradle:7.6.2-jdk17
+options:
+  size: 2x
+# Alias definitions.
+aliases:
+  - &sidekick
+    pipe: atlassian/artifactory-sidekick:v1
+  - &setup_artifactory_script >
+    source .artifactory/activate.sh
+
+definitions:
+  steps:
+    - step: &build-re-actor-library
+        name: Build and test re-actor Library
+        caches:
+          - gradle
+          - docker
+        script:
+          - set -euf
+          - *sidekick
+          - *setup_artifactory_script
+          - ./gradlew build
+        artifacts:
+          - re-actor/build/**
+    - step: &re-actor-library-version-release
+        name: Publish re-actor to Atlassian Repository
+        trigger: manual
+        caches:
+          - docker
+        script:
+          - set -euf
+          - *sidekick
+          - *setup_artifactory_script
+          - ./gradlew publish -i
+        artifacts:
+          - re-actor/build/**
+# Bitbucket Pipelines Configuration.
+pipelines:
+  branches:
+    master:
+      - step: *build-re-actor-library
+  # Default pipelines to be run on branch builds.
+  default:
+    - step: *build-re-actor-library
+  custom:
+    release re-actor library:
+      - step: *build-re-actor-library
+      - step: *re-actor-library-version-release
